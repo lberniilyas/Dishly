@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Menus are always light (food photos look best on a warm,
+ * neutral background); each restaurant brings its own accent colour via the
+ * --brand variable set on the page.
+ */
+@theme {
+  --color-cream: #fbf7f1;
+  --color-ink: #1f1a17;
+  --color-muted: #6f655c;
+  --color-line: #ebe3d8;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --animate-fade-out: fade-out 3.5s ease forwards;
+  @keyframes fade-out {
+    0%,
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+/* Values that come from other CSS variables (fonts from next/font, brand colour per restaurant). */
+@theme inline {
+  --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+}
+
+:root {
+  --brand: #b4532a;
+  --brand-ink: #ffffff;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+/* Sections land below the sticky category bar when jumped to. */
+[id^="cat-"] {
+  scroll-margin-top: 64px;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
