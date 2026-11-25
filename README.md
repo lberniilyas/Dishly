@@ -5,8 +5,8 @@ Diners scan a QR code on the table, the menu opens in the phone's browser (no ap
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Diner menu, 3D viewer, AR (iPhone + Android), model pipeline, analytics events, demo data | ✅ done |
-| 2 | Owner login, dashboard (restaurant / categories / dishes), photo + 3D model upload with optimization, size slider | next |
-| 3 | QR codes (restaurant + per-table PDF), stats dashboard, translations (FR/EN/AR + right-to-left) | later |
+| 2 | Owner accounts, dashboard (restaurant / categories / dishes), photo + 3D model upload with optimization and real-size slider, **AI menu import** (photo/PDF of the paper menu → digital menu) | ✅ done |
+| 3 | QR codes (restaurant + per-table PDF), stats dashboard, translations (FR/EN/AR + right-to-left) | next |
 
 Out of scope for now (but planned for): ordering, payments, POS, video → 3D.
 
@@ -51,8 +51,19 @@ Copy `.env.example` to `.env.local` and fill it in (Supabase dashboard → **Pro
 | `NEXT_PUBLIC_SUPABASE_URL` | everywhere — `https://<ref>.supabase.co` | no |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | reading public menus (`sb_publishable_…`, or the legacy *anon* key) | no — protected by Row Level Security |
 | `SUPABASE_SECRET_KEY` | seed script + analytics endpoint (`sb_secret_…`, or the legacy *service_role* key) | **yes — server only, never commit it** |
+| `AI_GATEWAY_API_KEY` | AI menu import (Vercel dashboard → **AI Gateway → API Keys**) | **yes — server only** |
+| `AI_MENU_MODEL` | optional, default `anthropic/claude-opus-5.5` | no |
+| `NEXT_PUBLIC_SITE_URL` | optional, public URL used in e-mail links when it can't be detected | no |
 
 `.env.local` is git-ignored.
+
+> **AI Gateway needs a payment method.** Vercel refuses AI Gateway requests until a card is on file (Vercel dashboard → **AI Gateway** → add a card; this also unlocks the free monthly credits). Then check everything works with `npm run ai:check` (reads `seed/samples/menu-sample.jpg`, a few cents). Without the key the rest of the app works; only the import page shows a notice.
+
+### 4b. Owner accounts (Supabase → Authentication)
+
+- **URL Configuration** → *Site URL*: your app URL (`http://localhost:3000` while developing, your domain in production). *Redirect URLs*: add `http://localhost:3000/auth/callback` and `https://your-domain/auth/callback` (and `https://*.trycloudflare.com/auth/callback` for phone testing).
+- **Sign In / Providers → Email**: while developing, you can turn off *Confirm email* to sign up instantly. Keep it on in production.
+- Supabase's built-in e-mail sender is limited to a few e-mails per hour and meant for testing. Before real restaurants sign up, add your own SMTP (e.g. Resend) in **Authentication → Emails → SMTP Settings**.
 
 ### 5. Load the demo restaurant
 
@@ -69,7 +80,25 @@ The seed runs each scan through the same optimization pipeline that owner upload
 npm run dev
 ```
 
-Open <http://localhost:3000/r/bistrot-demo?table=5>.
+Open <http://localhost:3000/r/bistrot-demo?table=5> (diner side) or <http://localhost:3000/signup> (owner side).
+
+<details>
+<summary>Optional: run Supabase on your computer instead (Docker)</summary>
+
+With Docker Desktop running: `npx supabase start` starts Postgres, Auth and Storage locally and applies `supabase/migrations/` automatically (first start downloads ~1 GB). `npx supabase status -o env` prints the local URL and keys to put in `.env.local`. Sign-up e-mails are caught by the local mail viewer (Mailpit, URL shown by `supabase status`). `npx supabase stop` when done.
+</details>
+
+---
+
+## Using the owner dashboard
+
+1. **Create an account** at `/signup`, then name your restaurant (the menu address is generated from the name; it's what the QR codes point to).
+2. **Import your menu with AI** (`Import IA`): take photos of your paper menu (one per page, up to 6) or upload a PDF. Dishly reads the sections, dishes, descriptions and prices; you review, fix and untick before importing. Or build it by hand in `Menu`.
+3. **Add photos**: on each dish page. Photos are shrunk on the phone before upload, then turned into the 3 sizes the menu needs.
+4. **Add 3D** to your best dishes: scan the dish with an app such as Polycam or Scaniverse, export a **.glb**, and import it on the dish page. Dishly optimizes it (usually 10–60 s), shows a preview and the size it detected. Adjust the **real size** with the slider (the preview grows/shrinks live), click *Appliquer cette taille*, then **Publier sur le menu**. Older versions are kept, so you can go back.
+5. **Publish** the menu from the overview page (`Aperçu`) when it's ready. Every change is visible on the public menu immediately.
+
+Scanning tips: put the plate on a plain, non-shiny surface with soft even light, walk slowly around it twice (low then high), and crop the table out in the scan app before exporting. A dish that isn't a round plate (cake, burger…) is sized by its largest width seen from above.
 
 ---
 
@@ -128,9 +157,10 @@ Supabase dashboard → **Table Editor → events**: you should see `menu_view` (
 ## Deploying (Vercel)
 
 1. Push the repo to GitHub and import it in Vercel.
-2. Add the three environment variables (Project → Settings → Environment Variables).
+2. Add the environment variables from `.env.example` (Project → Settings → Environment Variables), including `AI_GATEWAY_API_KEY`.
 3. In *Settings → Functions*, pick the region closest to your Supabase project (e.g. `cdg1` Paris).
 4. Deploy. The build reads published restaurants from Supabase to pre-render their menus, so run the migration and the seed first.
+5. In Supabase → Authentication → URL Configuration, add your Vercel domain (Site URL and `https://your-domain/auth/callback`).
 
 Every deployment gets an HTTPS URL, so preview deployments are another easy way to test on phones.
 
@@ -147,6 +177,7 @@ Every deployment gets an HTTPS URL, so preview deployments are another easy way 
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
 | `npm run samples:fetch` | Downloads the demo 3D scans into `seed/sources/` (git-ignored) |
 | `npm run seed` | (Re)creates the demo restaurant in Supabase |
+| `npm run ai:check [menu.jpg|menu.pdf]` | Sends a menu (default: `seed/samples/menu-sample.jpg`) to the AI reader and prints what it found — checks the AI Gateway setup |
 | `npm run model:process -- scan.glb --size-cm 26` | Runs the 3D pipeline on any file, writes `out/scan/model.glb`, `model.usdz`, `report.json` — handy to test a scan before uploading |
 
 ---
@@ -161,12 +192,19 @@ Every deployment gets an HTTPS URL, so preview deployments are another easy way 
 | `/r/[slug]/d/[dishId]` | Dish: 3D viewer + "Voir sur votre table" |
 | `POST /api/track` | Analytics beacons |
 | `/` | Minimal home page with a link to the demo |
+| `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/auth/callback` | Owner accounts (Supabase Auth, e-mail + password) |
+| `/dashboard` | Overview: publish/unpublish, public link, last 7 days |
+| `/dashboard/menu` | Categories and dishes: add, rename, reorder, hide |
+| `/dashboard/dishes/[id]` | Dish editor: details, photo, 3D model (upload → review → real size → publish) |
+| `/dashboard/import` | AI menu import from photos or a PDF |
+| `/dashboard/restaurant` | Name, menu address, colour, currency, logo |
+| `POST /api/models/process` | Runs the 3D pipeline on an uploaded scan (up to 5 min) |
 
 ### Folder structure
 
 ```
 src/
-├─ app/                    routes only (thin): pages + /api/track
+├─ app/                    routes only (thin): diner pages, (auth) pages, dashboard, API routes
 ├─ features/
 │  ├─ menu/                public menu data (cached query), cards, category bar
 │  ├─ viewer/              DishViewer — the only code touching <model-viewer>; AR detection
@@ -174,12 +212,16 @@ src/
 │  │  ├─ steps/            inspect · cleanup · simplify · textures · normalize (real size)
 │  │  └─ usdz/             GLB → USDZ converter for iPhone AR
 │  ├─ analytics/           event schema, browser tracker, server insert
+│  ├─ auth/                session helpers (data access layer), sign-in/up actions
+│  ├─ dashboard/           owner UI, Server Actions (restaurant, menu, dish, model), queries
+│  ├─ ai/                  AI menu import: Claude via Vercel AI Gateway, review UI
 │  ├─ media/               photo resizing, storage paths & URLs
 │  └─ i18n/                languages, French UI text, price formatting
-├─ lib/supabase/           public (browser-safe) and admin (server-only) clients
+├─ lib/supabase/           clients: public (diners), server (owner session, RLS), browser (uploads), admin (server-only)
+└─ proxy.ts                refreshes the owner session on /dashboard routes only
 supabase/migrations/       database schema + security rules
 seed/                      demo restaurant data + photos
-scripts/                   fetch-samples, seed, process-model
+scripts/                   fetch-samples, seed, process-model, check-ai
 public/draco/              decoder for compressed 3D models (served from our own domain)
 ```
 
@@ -229,9 +271,18 @@ Anyone can read **published** menus and **ready** models. Owners can only modify
 
 ---
 
-## Known limitations (phase 1)
+### Owner side
 
-- No owner dashboard yet: edit data in the Supabase Table Editor, or change `seed/demo-restaurant.ts` and re-run the seed.
+- **Sessions:** Supabase Auth (e-mail + password). `src/proxy.ts` refreshes the session cookie on owner pages only; the public menu never runs it.
+- **Every Server Action re-checks the session** (`authorize()` in `features/auth/session.ts`) and runs as the owner, so Row Level Security applies a second time in the database.
+- **3D uploads** go from the browser straight to a private storage bucket (scans can be 50 MB; serverless functions accept 4.5 MB), then `/api/models/process` runs the pipeline. Each run creates a new version; the dish points to the published one.
+- **Menu cache:** every edit calls `updateTag("menu:<slug>")`, so diners see the change on their next scan while the menu stays cached the rest of the time.
+- **AI menu import** uses Claude (Opus 5.5) through the Vercel AI Gateway with the official Anthropic SDK and structured outputs: the answer always matches a fixed schema. Nothing is saved before the owner reviews it.
+
+## Known limitations
+
+- 3D processing runs inside the request (up to 5 min on Vercel). Very heavy scans or many simultaneous uploads would need a background queue later.
+- One restaurant per account (the schema already supports several).
 - `ar_launch` counts taps on iPhone / Scene Viewer (platform limitation, see above).
 - `/api/track` has no per-IP rate limit yet; add one (e.g. Vercel Firewall rules) before selling stats to restaurants.
 - The .usdz is written as USDA (text USD, the same format three.js / model-viewer produce). Binary USDC would be ~30 % smaller; possible later.

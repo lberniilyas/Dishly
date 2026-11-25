@@ -69,6 +69,10 @@ async function Menu({ params }: { params: PageProps<"/r/[slug]">["params"] }) {
       <header className="mx-auto max-w-xl px-5 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5">
         <div className="flex items-start justify-between gap-3">
           <div>
+            {restaurant.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- pre-resized logo
+              <img src={restaurant.logoUrl} alt="" width={56} height={56} className="mb-3 size-14 rounded-2xl bg-white object-contain p-1.5 shadow-sm ring-1 ring-line" />
+            ) : null}
             <h1 className="font-display text-[34px] leading-tight text-ink">{restaurant.name}</h1>
             {tagline ? <p className="mt-1 text-[15px] text-muted">{tagline}</p> : null}
           </div>

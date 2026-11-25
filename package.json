@@ -10,13 +10,16 @@
     "typecheck": "next typegen && tsc --noEmit",
     "samples:fetch": "tsx scripts/fetch-samples.ts",
     "model:process": "tsx scripts/process-model.ts",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "ai:check": "tsx --conditions=react-server --env-file=.env.local scripts/check-ai.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
     "@google/model-viewer": "^4.4.0",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.2",
     "draco3dgltf": "^1.5.9",
     "fflate": "^0.8.3",

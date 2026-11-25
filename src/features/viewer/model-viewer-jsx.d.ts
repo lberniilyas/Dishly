@@ -16,6 +16,8 @@ type ModelViewerAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTML
   "ar-scale"?: "auto" | "fixed";
   "ar-placement"?: "floor" | "wall";
   "camera-controls"?: boolean;
+  "disable-zoom"?: boolean;
+  scale?: string;
   "touch-action"?: "pan-y" | "pan-x" | "none";
   "auto-rotate"?: boolean;
   "auto-rotate-delay"?: string;

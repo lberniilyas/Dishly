@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
     // putting our small Tailwind CSS (~6 KB gzipped) inside the HTML saves a
     // whole network round-trip before the menu can appear.
     inlineCss: true,
+    // Dish photos and logos are shrunk in the browser first; 4 MB leaves room
+    // under the 4.5 MB request limit of serverless hosting.
+    serverActions: { bodySizeLimit: "4mb" },
   },
 
   // Allow testing `next dev` from a phone through a Cloudflare tunnel (see README).
